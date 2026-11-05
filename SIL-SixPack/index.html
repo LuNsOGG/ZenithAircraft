@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101720">
+  <meta name="theme-color" content="#202326">
   <title>Six Pack · SIL</title>
   <link rel="stylesheet" href="styles.css">
   <script defer src="src/flight-state.js"></script>
+  <script defer src="src/dynamic-scenarios.js"></script>
+  <script defer src="src/playback.js"></script>
   <script defer src="src/instruments.js"></script>
+  <script defer src="src/verification.js"></script>
   <script defer src="src/app.js"></script>
 </head>
 <body>
@@ -20,9 +23,14 @@
       </div>
       <div class="topbar-meta">
         <span class="live-dot" aria-hidden="true"></span>
-        <span>ENTRADA MANUAL</span>
+        <span id="topbar-source">ENTRADA MANUAL</span>
         <span class="meta-separator">/</span>
-        <span>10 Hz</span>
+        <span>MUESTREO 10 Hz</span>
+      </div>
+      <div class="presentation-actions">
+        <button id="presentation-toggle" type="button" aria-pressed="false">Presentación</button>
+        <button id="presentation-pause" type="button" hidden>Pausar</button>
+        <button id="fullscreen-button" type="button" hidden>Pantalla completa</button>
       </div>
     </header>
 
@@ -71,20 +79,61 @@
           <h2 id="controls-title">Condición de vuelo</h2>
           <p>Modifica los valores para comprobar la respuesta de los seis instrumentos.</p>
         </div>
+        <div class="scenario-panel" aria-labelledby="scenarios-title">
+          <h3 id="scenarios-title">ESCENARIOS DE VUELO</h3>
+          <div class="scenario-buttons">
+            <button type="button" data-scenario="level">Vuelo nivelado</button>
+            <button type="button" data-scenario="climb">Ascenso</button>
+            <button type="button" data-scenario="turn">Viraje</button>
+            <button type="button" data-scenario="descent">Descenso</button>
+          </div>
+          <p id="scenario-status" class="scenario-status" aria-live="polite">Edición manual</p>
+        </div>
+        <div class="dynamic-panel" aria-labelledby="dynamic-title">
+          <h3 id="dynamic-title">SECUENCIA DINÁMICA</h3>
+          <label for="dynamic-profile">Perfil de vuelo</label>
+          <select id="dynamic-profile">
+            <option value="climbTurn">Ascenso con viraje · 32 s</option>
+            <option value="level">Vuelo nivelado · 16 s</option>
+            <option value="climb">Ascenso · 22 s</option>
+            <option value="turn">Viraje · 20 s</option>
+            <option value="descent">Descenso · 22 s</option>
+          </select>
+          <div class="dynamic-actions">
+            <button id="dynamic-start" type="button">Iniciar</button>
+            <button id="dynamic-pause" type="button" disabled>Pausar</button>
+            <button id="dynamic-restart" type="button">Reiniciar</button>
+          </div>
+          <div class="timeline-heading"><label for="dynamic-progress">Instante del recorrido</label><output id="dynamic-time" for="dynamic-progress">0.0 / 32 s</output></div>
+          <input id="dynamic-progress" type="range" min="0" max="32" step="0.1" value="0" aria-describedby="timeline-help">
+          <p id="timeline-help">Mover la línea de tiempo pausa el recorrido en ese instante.</p>
+          <label for="dynamic-speed">Velocidad de reproducción</label>
+          <select id="dynamic-speed"><option value="0.5">0.5× · Lenta</option><option value="1" selected>1× · Normal</option><option value="2">2× · Rápida</option></select>
+          <p id="dynamic-status" role="status" aria-live="polite">Listo para iniciar</p>
+        </div>
+        <div class="fault-panel" aria-labelledby="fault-title">
+          <h3 id="fault-title">FALLAS POR SISTEMA</h3>
+          <div class="system-fault-buttons">
+            <button type="button" data-system="pitot" aria-pressed="false">Pitot: OK</button>
+            <button type="button" data-system="static" aria-pressed="false">Estática: OK</button>
+          </div>
+          <p>Prueba de disponibilidad: pitot afecta ASI; estática afecta ASI, ALT y VSI. No reproduce un bloqueo físico.</p>
+          <button id="restore-signals" type="button">Restablecer todas las señales</button>
+        </div>
         <form id="flight-form" novalidate>
           <div class="control-group">
             <h3>DATOS AERODINÁMICOS</h3>
-            <label class="field" for="airspeed"><span>Velocidad indicada <small>kt</small></span><input id="airspeed" name="airspeed" type="number" min="0" max="240" step="1" value="90" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
-            <label class="field" for="altitude"><span>Altitud <small>ft</small></span><input id="altitude" name="altitude" type="number" min="-2000" max="60000" step="10" value="3500" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
-            <label class="field" for="verticalSpeed"><span>Velocidad vertical <small>ft/min</small></span><input id="verticalSpeed" name="verticalSpeed" type="number" min="-4000" max="4000" step="50" value="500" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
+            <div class="field"><label for="airspeed">Velocidad indicada <small>kt</small></label><input id="airspeed" name="airspeed" type="number" min="0" max="240" step="1" value="90" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="airspeed" aria-pressed="false" aria-label="Cortar señal de velocidad indicada">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
+            <div class="field"><label for="altitude">Altitud <small>ft</small></label><input id="altitude" name="altitude" type="number" min="-2000" max="60000" step="10" value="3500" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="altitude" aria-pressed="false" aria-label="Cortar señal de altitud">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
+            <div class="field"><label for="verticalSpeed">Velocidad vertical <small>ft/min</small></label><input id="verticalSpeed" name="verticalSpeed" type="number" min="-4000" max="4000" step="50" value="500" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="verticalSpeed" aria-pressed="false" aria-label="Cortar señal de velocidad vertical">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
           </div>
           <div class="control-group">
             <h3>ACTITUD Y DIRECCIÓN</h3>
-            <label class="field" for="pitch"><span>Cabeceo <small>°</small></span><input id="pitch" name="pitch" type="number" min="-45" max="45" step="1" value="5" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
-            <label class="field" for="roll"><span>Alabeo <small>°</small></span><input id="roll" name="roll" type="number" min="-60" max="60" step="1" value="10" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
-            <label class="field" for="heading"><span>Rumbo <small>°</small></span><input id="heading" name="heading" type="number" min="0" max="359" step="1" value="75" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
-            <label class="field" for="turnRate"><span>Velocidad de viraje <small>°/s</small></span><input id="turnRate" name="turnRate" type="number" min="-6" max="6" step="0.1" value="1.5" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
-            <label class="field" for="slip"><span>Deslizamiento <small>−1 a +1</small></span><input id="slip" name="slip" type="number" min="-1" max="1" step="0.1" value="0" inputmode="decimal"><span class="field-error" aria-hidden="true"></span></label>
+            <div class="field"><label for="pitch">Cabeceo <small>°</small></label><input id="pitch" name="pitch" type="number" min="-45" max="45" step="1" value="5" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="pitch" aria-pressed="false" aria-label="Cortar señal de cabeceo">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
+            <div class="field"><label for="roll">Alabeo <small>°</small></label><input id="roll" name="roll" type="number" min="-60" max="60" step="1" value="10" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="roll" aria-pressed="false" aria-label="Cortar señal de alabeo">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
+            <div class="field"><label for="heading">Rumbo <small>°</small></label><input id="heading" name="heading" type="number" min="0" max="359" step="1" value="75" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="heading" aria-pressed="false" aria-label="Cortar señal de rumbo">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
+            <div class="field"><label for="turnRate">Velocidad de viraje <small>°/s</small></label><input id="turnRate" name="turnRate" type="number" min="-6" max="6" step="0.1" value="1.5" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="turnRate" aria-pressed="false" aria-label="Cortar señal de velocidad de viraje">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
+            <div class="field"><label for="slip">Deslizamiento <small>−1 a +1</small></label><input id="slip" name="slip" type="number" min="-1" max="1" step="0.1" value="0" inputmode="decimal"><button class="signal-toggle" type="button" data-signal="slip" aria-pressed="false" aria-label="Cortar señal de deslizamiento">Señal OK</button><span class="field-error" aria-live="polite"></span></div>
           </div>
           <div class="control-actions">
             <button id="reset-button" type="reset">Restablecer valores</button>
@@ -92,10 +141,29 @@
         </form>
         <div class="control-foot">
           <span class="live-dot" aria-hidden="true"></span>
-          <span>FUENTE: MANUAL</span>
+          <span id="source-label">FUENTE: MANUAL</span>
         </div>
       </aside>
     </main>
+    <section class="verification-panel" aria-labelledby="verification-title">
+      <div class="log-heading">
+        <div><p class="eyebrow">COMPROBACIONES AUTOMÁTICAS</p><h2 id="verification-title">Resultados esperados</h2></div>
+        <div class="log-actions"><button id="verify-button" type="button">Ejecutar comprobaciones</button></div>
+      </div>
+      <p>Comprueba cálculos, límites y aislamiento de fallas con datos de prueba. Cada ejecución se añade al registro sin cambiar tu condición de vuelo.</p>
+      <div class="log-table-wrap"><table><thead><tr><th scope="col">Caso</th><th scope="col">Esperado</th><th scope="col">Obtenido</th><th scope="col">Resultado</th></tr></thead><tbody id="verification-rows"></tbody></table></div>
+      <p id="verification-status" role="status" aria-live="polite">Aún no se han ejecutado comprobaciones.</p>
+    </section>
+    <section class="test-log" aria-labelledby="log-title">
+      <div class="log-heading">
+        <div><p class="eyebrow">EVIDENCIA DEL SIL</p><h2 id="log-title">Registro de pruebas</h2></div>
+        <div class="log-actions"><button id="record-button" type="button">Registrar prueba</button><button id="export-button" type="button">Exportar CSV</button></div>
+      </div>
+      <p>Guarda una instantánea de los valores introducidos y de lo que indicaban los instrumentos. El registro permanece en este navegador.</p>
+      <div class="log-table-wrap"><table><thead><tr><th>Fecha y hora</th><th>Condición</th><th>Valores introducidos</th><th>Indicaciones mostradas</th><th>Estado</th><th>Comprobación</th></tr></thead><tbody id="log-rows"></tbody></table></div>
+      <p id="log-empty" class="log-empty">Todavía no hay pruebas registradas.</p>
+      <p id="log-message" class="log-message" role="status" aria-live="polite"></p>
+    </section>
   </div>
 </body>
 </html>

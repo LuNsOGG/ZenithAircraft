@@ -3,8 +3,8 @@
 window.SixPackInstruments = (() => {
   const TAU = Math.PI * 2;
   const C = {
-    face: "#0a1119", edge: "#637987", ring: "#263c4a", ink: "#e9f0ee",
-    muted: "#8ea7b3", cyan: "#70d6d0", amber: "#ffc575", warning: "#ffab83"
+    face: "#111314", ink: "#ecece5", muted: "#a9aca7",
+    readout: "#f0e9d8", amber: "#e0aa64", warning: "#e29b79"
   };
 
   function prepare(canvas) {
@@ -49,16 +49,16 @@ window.SixPackInstruments = (() => {
 
   function face(ctx, smallLabel) {
     const glow = ctx.createRadialGradient(150, 130, 18, 150, 150, 144);
-    glow.addColorStop(0, "#1d2b35");
+    glow.addColorStop(0, "#272b2d");
     glow.addColorStop(.72, C.face);
-    glow.addColorStop(1, "#050a10");
-    circle(ctx, 150, 150, 144, "#506574", "#738b98", 2);
-    circle(ctx, 150, 150, 137, "#1d303b", "#172a36", 3);
-    circle(ctx, 150, 150, 128, glow, "#617888", 1.5);
-    circle(ctx, 150, 150, 122, null, "#263b48", 2);
+    glow.addColorStop(1, "#0a0c0d");
+    circle(ctx, 150, 150, 144, "#727a7d", "#a8adae", 2);
+    circle(ctx, 150, 150, 137, "#363d40", "#252b2d", 3);
+    circle(ctx, 150, 150, 128, glow, "#858c8d", 1.5);
+    circle(ctx, 150, 150, 122, null, "#40484a", 2);
     text(ctx, smallLabel, 150, 207, 9, C.muted, 700);
     for (const [x, y] of [[36, 39], [264, 39], [36, 261], [264, 261]]) {
-      circle(ctx, x, y, 2.5, "#82919b");
+      circle(ctx, x, y, 2.5, "#a0a7a7");
     }
   }
 
@@ -89,32 +89,32 @@ window.SixPackInstruments = (() => {
     ctx.closePath();
     ctx.fill();
     ctx.restore();
-    circle(ctx, 150, 150, 9, "#182631", "#e9f0ee", 2);
+    circle(ctx, 150, 150, 9, "#24292b", "#ecece5", 2);
     circle(ctx, 150, 150, 3, color);
   }
 
   function readout(ctx, value, unit, y = 232, secondary = "") {
-    ctx.fillStyle = "#071219";
-    ctx.strokeStyle = "#446271";
+    ctx.fillStyle = "#191d1f";
+    ctx.strokeStyle = "#6e7779";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(76, y - 16, 148, 34, 5);
     ctx.fill();
     ctx.stroke();
-    text(ctx, value, 134, y + 1, 19, C.cyan, 750);
+    text(ctx, value, 134, y + 1, 19, C.readout, 750);
     text(ctx, unit, 197, y + 1, 10, C.muted, 700);
     if (secondary) text(ctx, secondary, 150, y + 29, 9, C.muted, 600);
   }
 
-  function unavailable(ctx) {
-    ctx.fillStyle = "rgba(5, 11, 17, .88)";
+  function unavailable(ctx, signalLost = false) {
+    ctx.fillStyle = "rgba(11, 13, 14, .9)";
     ctx.beginPath();
     ctx.arc(150, 150, 121, 0, TAU);
     ctx.fill();
     circle(ctx, 150, 130, 20, null, C.warning, 2);
     text(ctx, "!", 150, 131, 22, C.warning, 800);
-    text(ctx, "SIN DATOS", 150, 172, 15, C.warning, 750);
-    text(ctx, "Revise la entrada", 150, 195, 11, C.muted, 500);
+    text(ctx, signalLost ? "SIN SEÑAL" : "SIN DATOS", 150, 172, 15, C.warning, 750);
+    text(ctx, signalLost ? "Revise la fuente" : "Revise la entrada", 150, 195, 11, C.muted, 500);
   }
 
   function drawASI(ctx, v) {
@@ -139,9 +139,9 @@ window.SixPackInstruments = (() => {
     ctx.translate(150, 150);
     ctx.rotate(-roll * Math.PI / 180);
     const horizon = pitch * 3;
-    ctx.fillStyle = "#327fa2";
+    ctx.fillStyle = "#456f89";
     ctx.fillRect(-230, -230, 460, 230 + horizon);
-    ctx.fillStyle = "#8c674d";
+    ctx.fillStyle = "#80654e";
     ctx.fillRect(-230, horizon, 460, 230);
     line(ctx, -230, horizon, 230, horizon, "#e6e4d7", 3);
     for (const degrees of [-30, -20, -10, 10, 20, 30]) {
@@ -154,7 +154,7 @@ window.SixPackInstruments = (() => {
       }
     }
     ctx.restore();
-    circle(ctx, 150, 150, 113, null, "#96aeb9", 3);
+    circle(ctx, 150, 150, 113, null, "#a5aaa7", 3);
     for (const deg of [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]) {
       const angle = (-90 + deg) * Math.PI / 180;
       const major = deg === 0 || Math.abs(deg) === 30 || Math.abs(deg) === 60;
@@ -218,10 +218,10 @@ window.SixPackInstruments = (() => {
     ctx.lineTo(-9, -2); ctx.closePath(); ctx.fill();
     ctx.restore();
     // Bola de deslizamiento: entrada manual independiente de la velocidad de viraje.
-    line(ctx, 100, 198, 200, 198, "#6f8a96", 4);
+    line(ctx, 100, 198, 200, 198, "#929b9d", 4);
     line(ctx, 133, 190, 133, 206, C.ink, 2);
     line(ctx, 167, 190, 167, 206, C.ink, 2);
-    circle(ctx, 150 + slip * 43, 198, 9, C.amber, "#fff0ca", 1);
+    circle(ctx, 150 + slip * 43, 198, 9, C.amber, "#f1e7d3", 1);
     readout(ctx, `${rate >= 0 ? "+" : ""}${rate.toFixed(1)}`, "°/s", 237);
   }
 
@@ -240,10 +240,10 @@ window.SixPackInstruments = (() => {
     ctx.fillStyle = C.amber;
     ctx.beginPath();
     ctx.moveTo(150, 28); ctx.lineTo(143, 43); ctx.lineTo(157, 43); ctx.closePath(); ctx.fill();
-    line(ctx, 150, 118, 150, 174, C.cyan, 2);
-    line(ctx, 123, 150, 177, 150, C.cyan, 2);
-    circle(ctx, 150, 150, 7, C.face, C.cyan, 2);
-    readout(ctx, `${String(Math.round(heading)).padStart(3, "0")}°`, "HDG");
+    line(ctx, 150, 118, 150, 174, C.readout, 2);
+    line(ctx, 123, 150, 177, 150, C.readout, 2);
+    circle(ctx, 150, 150, 7, C.face, C.readout, 2);
+    readout(ctx, `${String(Math.round(heading) % 360).padStart(3, "0")}°`, "HDG");
   }
 
   function vsiAngle(speed) {
@@ -275,17 +275,17 @@ window.SixPackInstruments = (() => {
     }
     text(ctx, "VERTICAL SPEED", 150, 109, 10, C.muted, 700);
     text(ctx, "× 100 FT/MIN", 150, 183, 9, C.muted, 700);
-    text(ctx, "UP", 188, 145, 10, C.cyan, 750);
+    text(ctx, "UP", 188, 145, 10, C.readout, 750);
     text(ctx, "DN", 188, 163, 10, C.muted, 750);
     needle(ctx, vsiAngle(speed));
     // La lectura exacta se mantiene aparte de la escala analógica.
-    ctx.fillStyle = "#071219";
-    ctx.strokeStyle = "#446271";
+    ctx.fillStyle = "#191d1f";
+    ctx.strokeStyle = "#6e7779";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.roundRect(90, 233, 120, 28, 5);
     ctx.fill(); ctx.stroke();
-    text(ctx, `${speed >= 0 ? "+" : ""}${Math.round(speed)}`, 134, 247, 16, C.cyan, 750);
+    text(ctx, `${speed >= 0 ? "+" : ""}${Math.round(speed)}`, 134, 247, 16, C.readout, 750);
     text(ctx, "ft/min", 187, 247, 9, C.muted, 700);
   }
 
@@ -306,12 +306,28 @@ window.SixPackInstruments = (() => {
         definition.draw(ctx, fields);
         canvas.setAttribute("aria-label", `${canvas.parentElement.getAttribute("aria-label")}: ${definition.describe(fields)}`);
       } else {
+        const signalLost = definition.keys.some(key => fields[key].reason === "signal");
         face(ctx, "INDICACIÓN NO DISPONIBLE");
-        unavailable(ctx);
-        canvas.setAttribute("aria-label", `${canvas.parentElement.getAttribute("aria-label")}: sin datos`);
+        unavailable(ctx, signalLost);
+        canvas.setAttribute("aria-label", `${canvas.parentElement.getAttribute("aria-label")}: ${signalLost ? "sin señal" : "sin datos"}`);
       }
     }
   }
 
-  return { renderAll, vsiAngle };
+  function formatReadouts(fields) {
+    const value = key => fields[key].value;
+    const valid = (...keys) => keys.every(key => fields[key].valid);
+    const signed = number => `${number >= 0 ? "+" : ""}${number.toFixed(0)}`;
+    const missing = (...keys) => keys.some(key => fields[key].reason === "signal") ? "SIN SEÑAL" : "SIN DATOS";
+    return {
+      asi: valid("airspeed") ? `${value("airspeed").toFixed(0)} kt` : missing("airspeed"),
+      ai: valid("pitch", "roll") ? `${signed(value("pitch"))}° pitch / ${signed(value("roll"))}° roll` : missing("pitch", "roll"),
+      alt: valid("altitude") ? `${Math.round(value("altitude")).toLocaleString("en-US")} ft` : missing("altitude"),
+      tc: valid("turnRate", "slip") ? `${value("turnRate") >= 0 ? "+" : ""}${value("turnRate").toFixed(1)}°/s; bola ${value("slip").toFixed(1)}` : missing("turnRate", "slip"),
+      hi: valid("heading") ? `${String(Math.round(value("heading")) % 360).padStart(3, "0")}°` : missing("heading"),
+      vsi: valid("verticalSpeed") ? `${value("verticalSpeed") >= 0 ? "+" : ""}${Math.round(value("verticalSpeed"))} ft/min` : missing("verticalSpeed")
+    };
+  }
+
+  return { renderAll, formatReadouts, vsiAngle };
 })();

@@ -1,29 +1,38 @@
 # Six Pack SIL
 
-Primer prototipo de los seis instrumentos de aviación. Las variables se introducen manualmente y el panel las representa en el navegador.
+Prototipo académico de los seis instrumentos básicos de vuelo, desarrollado en HTML, CSS y JavaScript. Funciona en el navegador con entradas manuales, escenarios de demostración y comprobaciones automáticas.
 
-## Abrir el proyecto
+## Ejecutar
 
-1. Abre esta carpeta (`sixpack-sil`) en Visual Studio Code.
-2. Abre `index.html` en un navegador moderno. También puedes usar la opción de VS Code para abrirlo en el navegador.
-3. Cambia los campos de la columna «Condición de vuelo». El panel se actualiza inmediatamente y realiza una lectura cada 100 ms.
+1. Clona o descarga este repositorio.
+2. Abre `SIL-SixPack/index.html` en un navegador moderno. También puedes servir la carpeta con Live Server desde Visual Studio Code.
+3. Modifica las entradas o inicia una secuencia dinámica desde los controles.
 
-No requiere instalar Python, Node ni paquetes de JavaScript.
+El uso del panel no requiere Python, Node.js ni instalar paquetes.
 
-## Carpetas y archivos
+## Funciones
 
-- `index.html`: estructura del panel y controles.
-- `styles.css`: presentación adaptable a distintos tamaños de pantalla.
-- `src/flight-state.js`: variables, límites y validación de entradas.
-- `src/instruments.js`: dibujo de ASI, AI, ALT, TC, HI y VSI.
-- `src/app.js`: lectura de entradas y actualización de la interfaz.
-- `jsconfig.json`: configuración del proyecto JavaScript para Visual Studio Code.
+- Six-pack: velocidad indicada (ASI), horizonte artificial (AI), altímetro (ALT), coordinador de viraje (TC), rumbo (HI) y velocidad vertical (VSI).
+- Escenarios fijos y cinco secuencias dinámicas, con pausa, reinicio, selección de instante y velocidades de reproducción de 0.5×, 1× y 2×.
+- Validación de entradas, pérdida individual de señales y fallas de disponibilidad de pitot y presión estática.
+- Registro de entrada, indicación y estado, persistencia local en el navegador y exportación CSV.
+- Ocho comprobaciones automáticas con valores esperados y modo presentación con pantalla completa.
 
-## Comprobaciones manuales sugeridas
+## Pruebas de desarrollo
 
-- Cambia la velocidad a 30 kt y el cabeceo a 20°. ASI y AI deben actualizarse sin reiniciar la página.
-- Cambia el rumbo de 359° a 0° y comprueba que la rosa gira sin perder la indicación.
-- Deja vacío un campo o introduce un valor fuera del rango mostrado. El instrumento correspondiente debe indicar «SIN DATOS».
-- Usa «Restablecer valores» para regresar a la condición inicial.
+Con Node.js 18 o posterior, ejecuta desde la raíz del repositorio:
 
-Las escalas gráficas son preliminares. Este prototipo representa las variables ingresadas; todavía no calcula variables a partir de sensores.
+```sh
+node SIL-SixPack/tests/run-tests.cjs
+```
+
+No requiere dependencias externas. La suite cubre lógica, reproducción, controles, fallas combinadas, registro, exportación y presentación con un DOM/Canvas simulado. La apariencia y la pantalla completa también deben revisarse en un navegador real.
+
+## Estructura y documentación
+
+- [`SIL-SixPack/GUIA_SIL.md`](SIL-SixPack/GUIA_SIL.md): uso, pruebas manuales, módulos y límites del prototipo.
+- `SIL-SixPack/src/`: estado, perfiles dinámicos, reloj, instrumentos, comprobaciones e interfaz.
+- `SIL-SixPack/tests/`: pruebas de regresión sin paquetes adicionales.
+- [`Trabajo para el primer parcial.docx`](Trabajo%20para%20el%20primer%20parcial.docx): reporte académico de la primera fase; conserva el contexto original y no describe necesariamente todas las funciones actuales.
+
+Las escalas son genéricas. Los perfiles son trayectorias programadas para demostración, y las fallas representan pérdida de datos. El prototipo todavía no recibe datos de sensores ni del puerto serial.

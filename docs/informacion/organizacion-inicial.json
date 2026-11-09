@@ -1,0 +1,122 @@
+[
+  {
+    "original": "SIL-SixPack/GUIA_SIL.md",
+    "destino": "SixPack/docs/informacion/GUIA_SIL.md",
+    "sha256": "cff9277319cee51cf05772bec6f473a2065dc509496b42b050fd2595372f8172",
+    "bytes": 7023
+  },
+  {
+    "original": "SIL-SixPack/index.html",
+    "destino": "SixPack/sil/index.html",
+    "sha256": "be170fe466039513b9c8fb2fa2e2aa6fa4fbcd3826db8195fe56221035fea4c2",
+    "bytes": 12876
+  },
+  {
+    "original": "SIL-SixPack/jsconfig.json",
+    "destino": "SixPack/sil/jsconfig.json",
+    "sha256": "08d103a9343d02b325e84d870efb977a0a1b80494db9a48bcf31090777df4885",
+    "bytes": 114
+  },
+  {
+    "original": "SIL-SixPack/README.md",
+    "destino": "SixPack/docs/informacion/README_SIL_carpeta_original.md",
+    "sha256": "04c423a503e7ca5d320ea8d07090aa770efd8e62de593c772aa7da8b5cf6abfd",
+    "bytes": 283
+  },
+  {
+    "original": "SIL-SixPack/styles.css",
+    "destino": "SixPack/sil/styles.css",
+    "sha256": "a66c83e924e7379c7a49b4dca3c886a396ca90046a036482a9bfbfcfad54025e",
+    "bytes": 12632
+  },
+  {
+    "original": "SIL-SixPack/src/app.js",
+    "destino": "SixPack/sil/src/app.js",
+    "sha256": "bc97eeda9303cb4c0921908b23b56ebd175bd61b39de1395619248bb73e05d97",
+    "bytes": 23261
+  },
+  {
+    "original": "SIL-SixPack/src/dynamic-scenarios.js",
+    "destino": "SixPack/sil/src/dynamic-scenarios.js",
+    "sha256": "965abe98ed06b5b6b8e82984f514bd3180ceb4cf35ade1bc0358337701e8d807",
+    "bytes": 3809
+  },
+  {
+    "original": "SIL-SixPack/src/flight-state.js",
+    "destino": "SixPack/sil/src/flight-state.js",
+    "sha256": "c6cfb68eb4af99038efe3c1c49ddd4c90f0944fb952e0a602a31973ffe799e62",
+    "bytes": 2764
+  },
+  {
+    "original": "SIL-SixPack/src/instruments.js",
+    "destino": "SixPack/sil/src/instruments.js",
+    "sha256": "e01ad123c6a9db8796b2204c0d734004d8ab1816c3829f257682809047540444",
+    "bytes": 13950
+  },
+  {
+    "original": "SIL-SixPack/src/playback.js",
+    "destino": "SixPack/sil/src/playback.js",
+    "sha256": "6655b2f22e1a9cd7489c832deda08617a34fbca5665d17f8f147c9f2c3dfc353",
+    "bytes": 1869
+  },
+  {
+    "original": "SIL-SixPack/src/verification.js",
+    "destino": "SixPack/sil/src/verification.js",
+    "sha256": "9c00d0ac61a4ca2b1122e17f1718a1c305eaf315f7c6bd0172cf9aee02b124c9",
+    "bytes": 4491
+  },
+  {
+    "original": "SIL-SixPack/tests/run-tests.cjs",
+    "destino": "SixPack/sil/tests/run-tests.cjs",
+    "sha256": "5858a62e18716d832aadc35839e9efaf54feebfb3289f2218e5191b297e9bc62",
+    "bytes": 13573
+  },
+  {
+    "original": "ZenithV3/61SX81QalNL._AC_SL1500_.avif",
+    "destino": "Zenith/hardware/referencias/ZenithV3/61SX81QalNL._AC_SL1500_.avif",
+    "sha256": "0b489ee609c6855932749dcd6dcd29fe9256b6d91642f13338b50d6692c2ce6d",
+    "bytes": 80702
+  },
+  {
+    "original": "ZenithV3/71lPOySV5jL._AC_SX679_.avif",
+    "destino": "Zenith/hardware/referencias/ZenithV3/71lPOySV5jL._AC_SX679_.avif",
+    "sha256": "34701d970a67b8c45f99cef871eef338b922318a71446b69c09af0f2aa997dff",
+    "bytes": 53301
+  },
+  {
+    "original": "ZenithV3/n6HwU-_2_yiEGaAPyHZTH-0ibuDqFS6z0fP9EuQJOsBzGDZJL9ZoyvZERX6c0yca_H9lsX0oZMPNn38x2h3I_WLTKRaMEv6dm5EiuGo5RF-dSKB--B9S5wysBBQAd_qk0YDC0OzduixUqU5c_sULQALAh17628MibOizK7C6K4Q4T5DeihbTevFdkww.jpg",
+    "destino": "Zenith/hardware/referencias/ZenithV3/n6HwU-_2_yiEGaAPyHZTH-0ibuDqFS6z0fP9EuQJOsBzGDZJL9ZoyvZERX6c0yca_H9lsX0oZMPNn38x2h3I_WLTKRaMEv6dm5EiuGo5RF-dSKB--B9S5wysBBQAd_qk0YDC0OzduixUqU5c_sULQALAh17628MibOizK7C6K4Q4T5DeihbTevFdkww.jpg",
+    "sha256": "d13809874d045007eba5ea432a2ea4dc5a1c48670cb7d5387e5f24c3a9adda30",
+    "bytes": 182579
+  },
+  {
+    "original": "ZenithV3/original-dimensions-STM32F407VGT6_STM32F4XX_M.pdf",
+    "destino": "Zenith/hardware/referencias/ZenithV3/original-dimensions-STM32F407VGT6_STM32F4XX_M.pdf",
+    "sha256": "ce5c177f42f83bd69bb9c5fd12f4c4c994bc251076e2c5fd8879824979fef2e6",
+    "bytes": 196454
+  },
+  {
+    "original": "ZenithV3/original-schematic-STM32F407VGT6_STM32F4XX_M.pdf",
+    "destino": "Zenith/hardware/referencias/ZenithV3/original-schematic-STM32F407VGT6_STM32F4XX_M.pdf",
+    "sha256": "021c1f8390aec431643a9d4517365e5fb2459542ef7a9e1943a5823b9c41d7ce",
+    "bytes": 256649
+  },
+  {
+    "original": "ZenithV3/STM32F407VET6_STM32F4XX_M-1.jpg",
+    "destino": "Zenith/hardware/referencias/ZenithV3/STM32F407VET6_STM32F4XX_M-1.jpg",
+    "sha256": "42ce46063feb1c4254f2bd77382d5ebe2c79c966c110f706aca2d8b64ad9ca9d",
+    "bytes": 540480
+  },
+  {
+    "original": "README.md",
+    "destino": "SixPack/docs/informacion/README_SIL_original.md",
+    "sha256": "f59ef4a19fc72b338d98ee6cd57907823e6d413e54b3a41ec53b9879b216fc00",
+    "bytes": 2330
+  },
+  {
+    "original": "Trabajo para el primer parcial.docx",
+    "destino": "SixPack/docs/documentos/Trabajo para el primer parcial.docx",
+    "sha256": "c7ed507ff2fe4b4a0aaa760af125b645b80bce2a0879b0764d93b60eee525356",
+    "bytes": 5440580
+  }
+]

@@ -1,38 +1,41 @@
-# Six Pack SIL
+# ZenithAircraft
 
-Prototipo académico de los seis instrumentos básicos de vuelo, desarrollado en HTML, CSS y JavaScript. Funciona en el navegador con entradas manuales, escenarios de demostración y comprobaciones automáticas.
+Proyecto de aviónica que reúne **SixPack**, el software de visualización y análisis de vuelo, y **Zenith**, la computadora de vuelo y su firmware. Ambos se desarrollan en este mismo repositorio.
 
-## Ejecutar
+## Organización
 
-1. Clona o descarga este repositorio.
-2. Abre `SIL-SixPack/index.html` en un navegador moderno. También puedes servir la carpeta con Live Server desde Visual Studio Code.
-3. Modifica las entradas o inicia una secuencia dinámica desde los controles.
+| Carpeta | Propósito |
+| --- | --- |
+| [SixPack/](SixPack/README.md) | SIL y futura aplicación de escritorio |
+| [Zenith/](Zenith/README.md) | Firmware para STM32F407VET6, prototipos STM32F411 Black Pill y hardware |
+| [docs/](docs/README.md) | Documentos e información generales del proyecto |
+| [protocols/](protocols/README.md) | Contrato de datos compartido entre firmware y aplicaciones |
+| [data/examples/](data/examples/README.md) | Futuros registros de ejemplo para desarrollo y pruebas |
 
-El uso del panel no requiere Python, Node.js ni instalar paquetes.
+Cada área tiene `docs/documentos/` para reportes y archivos de consulta y `docs/informacion/` para guías, decisiones y notas técnicas. Los documentos específicos se guardan en SixPack o Zenith; los que afectan a ambas partes se guardan en `docs/` en la raíz.
 
-## Funciones
+## Ejecutar el SIL actual
 
-- Six-pack: velocidad indicada (ASI), horizonte artificial (AI), altímetro (ALT), coordinador de viraje (TC), rumbo (HI) y velocidad vertical (VSI).
-- Escenarios fijos y cinco secuencias dinámicas, con pausa, reinicio, selección de instante y velocidades de reproducción de 0.5×, 1× y 2×.
-- Validación de entradas, pérdida individual de señales y fallas de disponibilidad de pitot y presión estática.
-- Registro de entrada, indicación y estado, persistencia local en el navegador y exportación CSV.
-- Ocho comprobaciones automáticas con valores esperados y modo presentación con pantalla completa.
+Abre [SixPack/sil/index.html](SixPack/sil/index.html) en un navegador moderno, o sirve esa carpeta con Live Server. Su uso no requiere Python, Node.js ni instalar paquetes.
 
-## Pruebas de desarrollo
+Incluye ASI, horizonte artificial, altímetro, coordinador de viraje, rumbo y VSI; entradas manuales; cinco secuencias dinámicas; pausa, salto y velocidad de reproducción; validación y fallas de disponibilidad; registro local y CSV; ocho comprobaciones automáticas y modo presentación.
 
-Con Node.js 18 o posterior, ejecuta desde la raíz del repositorio:
+Con Node.js 18 o posterior, ejecuta desde la raíz:
 
 ```sh
-node SIL-SixPack/tests/run-tests.cjs
+node SixPack/sil/tests/run-tests.cjs
 ```
 
-No requiere dependencias externas. La suite cubre lógica, reproducción, controles, fallas combinadas, registro, exportación y presentación con un DOM/Canvas simulado. La apariencia y la pantalla completa también deben revisarse en un navegador real.
+La suite no requiere dependencias externas y utiliza un DOM/Canvas simulado. La apariencia y la pantalla completa deben revisarse también en un navegador real. Consulta la [guía del SIL](SixPack/docs/informacion/GUIA_SIL.md).
 
-## Estructura y documentación
+## Estado y alcance
 
-- [`SIL-SixPack/GUIA_SIL.md`](SIL-SixPack/GUIA_SIL.md): uso, pruebas manuales, módulos y límites del prototipo.
-- `SIL-SixPack/src/`: estado, perfiles dinámicos, reloj, instrumentos, comprobaciones e interfaz.
-- `SIL-SixPack/tests/`: pruebas de regresión sin paquetes adicionales.
-- [`Trabajo para el primer parcial.docx`](Trabajo%20para%20el%20primer%20parcial.docx): reporte académico de la primera fase; conserva el contexto original y no describe necesariamente todas las funciones actuales.
+- **Disponible:** SIL web con datos manuales y secuencias programadas.
+- **Por desarrollar:** aplicación de escritorio, integración serial y firmware para ambas placas. Las carpetas reservadas no contienen todavía implementaciones de esas funciones.
+- **Hardware principal previsto:** STM32F407VET6. **Prototipado:** STM32F411 Black Pill.
+- Las escalas del SIL son genéricas. Las secuencias no simulan la dinámica completa de una aeronave y las fallas representan pérdida de datos, no bloqueos físicos del sistema pitot-estático.
+- La tecnología de la aplicación de escritorio y el protocolo de comunicación siguen pendientes de definición.
 
-Las escalas son genéricas. Los perfiles son trayectorias programadas para demostración, y las fallas representan pérdida de datos. El prototipo todavía no recibe datos de sensores ni del puerto serial.
+La carpeta local permanece en `F:\VisualStudioCode\SixPack` por decisión del propietario. ZenithAircraft es el nombre del proyecto; esta organización no requiere renombrar la carpeta local.
+
+Consulta la [guía de organización y conservación](docs/informacion/organizacion.md) para ubicar los archivos anteriores, incluido el reporte del primer parcial y las referencias de `ZenithV3`.

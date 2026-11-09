@@ -36,6 +36,6 @@ La suite no requiere dependencias externas y utiliza un DOM/Canvas simulado. La 
 - Las escalas del SIL son genéricas. Las secuencias no simulan la dinámica completa de una aeronave y las fallas representan pérdida de datos, no bloqueos físicos del sistema pitot-estático.
 - La tecnología de la aplicación de escritorio y el protocolo de comunicación siguen pendientes de definición.
 
-La carpeta local permanece en `F:\VisualStudioCode\SixPack` por decisión del propietario. ZenithAircraft es el nombre del proyecto; esta organización no requiere renombrar la carpeta local.
+La carpeta local del proyecto es `F:\VisualStudioCode\ZenithAircraft`.
 
 Consulta la [guía de organización y conservación](docs/informacion/organizacion.md) para ubicar los archivos anteriores, incluido el reporte del primer parcial y las referencias de `ZenithV3`.

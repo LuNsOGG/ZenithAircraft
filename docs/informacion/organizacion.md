@@ -1,6 +1,6 @@
 # Organización y conservación
 
-ZenithAircraft reúne SixPack y Zenith en un solo repositorio. La carpeta local continúa siendo `F:\VisualStudioCode\SixPack`; todas las operaciones de esta reorganización se realizan dentro de esa ruta.
+ZenithAircraft reúne SixPack y Zenith en un solo repositorio. La carpeta local actual es `F:\VisualStudioCode\ZenithAircraft`; trabaja desde esa raíz para ejecutar los comandos del proyecto.
 
 ## Ubicación del contenido anterior
 
@@ -30,5 +30,13 @@ La aplicación de escritorio y el firmware todavía no están implementados. Est
 ## Ejecutar y verificar
 
 Abre `SixPack/sil/index.html` en el navegador. Desde la raíz ejecuta `node SixPack/sil/tests/run-tests.cjs` con Node.js 18 o posterior. La apariencia y la pantalla completa requieren revisión en navegador real.
+
+En Windows, habilita las rutas largas de Git desde la raíz del repositorio para trabajar con los nombres extensos de las referencias de hardware:
+
+```sh
+git config --local core.longpaths true
+```
+
+Este ajuste se guarda en la configuración local de Git y debe aplicarse en cada copia del repositorio donde se necesite.
 
 Para localizar instrucciones anteriores, ten presente que `SIL-SixPack/` pasó a `SixPack/sil/`. Los README históricos conservan las rutas originales.

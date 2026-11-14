@@ -1,0 +1,23 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "STM32: Configurar Debug",
+            "type": "process",
+            "command": "C:/Users/famil/.vscode/extensions/stmicroelectronics.stm32cube-ide-core-1.5.0-win32-x64/resources/binaries/win32/x86_64/cube.exe",
+            "args": ["cmake", "--preset", "Debug"],
+            "options": {"cwd": "${workspaceFolder}"},
+            "problemMatcher": []
+        },
+        {
+            "label": "STM32: Compilar Debug",
+            "type": "process",
+            "command": "C:/Users/famil/.vscode/extensions/stmicroelectronics.stm32cube-ide-core-1.5.0-win32-x64/resources/binaries/win32/x86_64/cube.exe",
+            "args": ["cmake", "--build", "--preset", "Debug"],
+            "options": {"cwd": "${workspaceFolder}"},
+            "dependsOn": ["STM32: Configurar Debug"],
+            "group": {"kind": "build", "isDefault": true},
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}

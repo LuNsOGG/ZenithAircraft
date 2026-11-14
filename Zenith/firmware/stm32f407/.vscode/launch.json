@@ -1,0 +1,24 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "STM32: Depurar con ST-Link",
+            "type": "stlinkgdbtarget",
+            "request": "launch",
+            "origin": "snippet",
+            "cwd": "${workspaceFolder}",
+            "deviceName": "STM32F407VET6",
+            "deviceCore": "Cortex-M4",
+            "serverReset": "Software system reset",
+            "serverInterfaceFrequency": "1000",
+            "preLaunchTask": "STM32: Compilar Debug",
+            "preBuild": "",
+            "runEntry": "main",
+            "imagesAndSymbols": [
+                {
+                    "imageFileName": "${workspaceFolder}/build/Debug/zenith_aircraft.elf"
+                }
+            ]
+        }
+    ]
+}

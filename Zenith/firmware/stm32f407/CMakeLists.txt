@@ -31,11 +31,26 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/files.cmake)
 target_sources(${PROJECT_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/application.c
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/bmp388.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/barometric_altitude.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/serial_output.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src/tusb.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src/common/tusb_fifo.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src/device/usbd.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src/device/usbd_control.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src/class/cdc/cdc_device.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src/portable/synopsys/dwc2/dcd_dwc2.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src/portable/synopsys/dwc2/dwc2_common.c
 )
 
 # Add include directories
 target_include_directories(${PROJECT_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/Core/Inc
+  ${CMAKE_CURRENT_SOURCE_DIR}/usb
+)
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/tinyusb/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/cmsis_device_f4/Include
+  ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/cmsis_core/CMSIS/Core/Include
 )
 
 # Compiler options
@@ -45,6 +60,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 # Add additional defined symbols
 target_compile_definitions(${PROJECT_NAME} PRIVATE
+  STM32F407xx HSE_VALUE=8000000U
   # Add additional defined symbols here
 )
 
@@ -60,6 +76,7 @@ target_link_directories(${PROJECT_NAME} PRIVATE
 
 # Add additional linker libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
+  m # pow/sqrt for the standard-atmosphere model and reference statistics.
   # Add additional linker libraries here
 )
 

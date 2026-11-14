@@ -21,10 +21,10 @@ La compilación genera `build/Debug/zenith_aircraft.elf`, `.hex`, `.bin` y `.map
 - `cmake`: configuración de construcción y del microcontrolador.
 - `.settings` y `.vscode`: integración con la extensión STM32 y CMake Tools.
 
-La plataforma está concentrada en `main.c` y `main.h`, conservando la organización existente. `main.c` proporciona SPI1, los temporizadores y EXTI0/PB0; `bmp388.c/.h` identifica/configura el sensor y compensa sus datos, y `application.c/.h` coordina el arranque y la adquisición y publica los resultados para Watch. Se usa un subconjunto privado de registros del STM32F407, sin dependencias adicionales de HAL ni CMSIS. Las direcciones, campos y secuencia se basan en [RM0090](https://www.st.com/resource/en/reference_manual/dm00031020-stm32f405-415-stm32f407-417-stm32f427-437-and-stm32f429-439-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf), [PM0214](https://www.st.com/resource/en/programming_manual/pm0214-stm32-cortexm4-mcus-and-mpus-programming-manual-stmicroelectronics.pdf) y las [definiciones oficiales del dispositivo](https://github.com/STMicroelectronics/cmsis-device-f4/blob/master/Include/stm32f407xx.h).
+La plataforma está concentrada en `main.c` y `main.h`, conservando la organización existente. `main.c` proporciona SPI1, los temporizadores, EXTI0/PB0 y la preparación de reloj/GPIO USB; `bmp388.c/.h` identifica/configura el sensor y compensa sus datos, y `application.c/.h` coordina el arranque y la adquisición y publica los resultados para Watch. `barometric_altitude.c/.h` captura el cero y calcula/filtra las alturas relativa y barométrica estimada. `serial_output.c/.h` transmite por USB CDC y recibe la orden de cero desde la PC. La adquisición conserva su subconjunto privado de registros; USB incorpora TinyUSB y cabeceras CMSIS oficiales bajo `ThirdParty`, sin HAL ni RTOS. Las direcciones, campos y secuencia se basan en [RM0090](https://www.st.com/resource/en/reference_manual/dm00031020-stm32f405-415-stm32f407-417-stm32f427-437-and-stm32f429-439-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf), [PM0214](https://www.st.com/resource/en/programming_manual/pm0214-stm32-cortexm4-mcus-and-mpus-programming-manual-stmicroelectronics.pdf) y las [definiciones oficiales del dispositivo](https://github.com/STMicroelectronics/cmsis-device-f4/blob/master/Include/stm32f407xx.h).
 
 - `SystemInit`, llamado antes de inicializar `.data` y `.bss`, habilita la FPU y sitúa la tabla de vectores en la dirección del símbolo `g_pfnVectors` del arranque de ST. No depende de variables inicializadas de C.
-- Desde `main` se selecciona explícitamente HSI interno de **16 MHz nominales**, con AHB, APB1 y APB2 sin división. Las esperas de reloj tienen un límite de iteraciones y un código de error; ese límite no representa un tiempo calibrado. No se activa el cristal externo ni el PLL.
+- Desde `main` se selecciona explícitamente HSI interno de **16 MHz nominales**, con AHB, APB1 y APB2 sin división. Las esperas de reloj tienen un límite de iteraciones y un código de error; ese límite no representa un tiempo calibrado. Posteriormente USB habilita HSE de 8 MHz y PLLQ de 48 MHz, conservando HSI para CPU, buses y temporizadores.
 - TIM2 recibe 16 MHz nominales y genera interrupciones de actualización a **1 kHz nominal**, periodo de **1 ms**: `16000000 / (PSC + 1) / (ARR + 1)`. Se conserva el ajuste actual del contador interno de 2 MHz (`PSC = 7`, `ARR = 1999`). La bandera del evento usado para cargar los divisores se limpia antes de habilitar la interrupción.
 - `TIM2_IRQHandler` limpia la bandera y aumenta un contador. El bucle principal espera con `WFI`, aumenta otro contador al continuar y atiende la aplicación. Las transferencias SPI y la compensación se ejecutan en el bucle principal, nunca en las interrupciones. No se usa SysTick.
 - TIM5 proporciona un contador libre de 1 MHz nominal para marcas de tiempo, latencia y ventanas de frecuencia; no genera interrupciones. Su resta modular admite el desbordamiento de 32 bits (cada 71,6 minutos aproximadamente).
@@ -32,7 +32,9 @@ La plataforma está concentrada en `main.c` y `main.h`, conservando la organizac
 - TIM2 y TIM5 se congelan cuando el procesador se detiene en depuración; se mantiene el acceso de depuración durante el sueño normal de `WFI`. El BMP388 externo sigue midiendo durante esas pausas.
 - Un HardFault detiene la prueba con un código observable. Es un diagnóstico mínimo, sin captura de contexto ni recuperación automática.
 
-BMI160, cálculo de altura, registro y salida serial permanecen como archivos vacíos. La aplicación actual es una prueba secuencial de adquisición con estados de arranque, espera de reset, ejecución y reintento, sin tareas ni colas. FreeRTOS aún no está integrado; las vistas RTOS de la extensión no implican que su kernel esté en el firmware.
+BMI160 y registro SD permanecen como archivos vacíos. La aplicación actual es una prueba secuencial de adquisición, dos alturas y USB CDC con estados de arranque, espera de reset, ejecución y reintento, sin tareas ni colas RTOS. FreeRTOS, UART e integración con SixPack siguen pendientes; las vistas RTOS de la extensión no implican que su kernel esté en el firmware.
+
+La ventana se encuentra en [../../tools/altitude_monitor/](../../tools/altitude_monitor/README.md). Ejecutar `Iniciar_monitor.cmd` o `python monitor.py --auto-connect` desde esa carpeta. En la prueba real, la placa enumeró como COM11. Relojes, dependencias, alimentación, copia de respaldo y resultados de la carga autorizada se detallan en [usb/README.md](usb/README.md).
 
 ## Hardware y verificación
 
@@ -40,11 +42,11 @@ El usuario ya cargó la prueba anterior de plataforma, alcanzó `main` y observ�
 
 El usuario también cargó la etapa posterior de identificación SPI: obtuvo `CHIP_ID = 80` (`0x50`), seis consultas correctas de seis, cero errores y `STATUS = 16` (`0x10`). Eso comprueba comunicación e identificación, sin demostrar mediciones de presión/temperatura.
 
-La nueva etapa de adquisición se verifica por compilación Debug/Release, análisis estático, enlace de vectores y pruebas de lógica ARM con un sensor simulado. Estas comprobaciones no validan físicamente INT, los valores compensados ni la frecuencia efectiva. Esta preparación no ha cargado el nuevo firmware ni iniciado una sesión con el ST-Link.
+La adquisición y las alturas se verifican por compilación Debug/Release, análisis estático y pruebas de lógica ARM con un sensor simulado. Después, con autorización expresa del usuario, se cargó y verificó Release mediante ST-Link y se comprobaron 20 s de telemetría USB real: 393 tramas, ambas alturas válidas y una orden de cero confirmada, sin errores de decodificación ni huecos de secuencia. La ventana también se comprobó conectada a COM11 y se probó su botón de cero. Estas verificaciones no miden exactitud, pérdida cero universal ni comportamiento de vuelo.
 
 La programación y depuración previstas serán mediante SWD y el HiLetgo ST-Link V2 del usuario. Se instalaron y verificaron en el almacén de Windows los controladores oficiales ST-Link Debug, Bridge y VCP (2.2.0.0), tras completar el asistente con autorización de administrador. Esto no añade una interfaz UART al programador ST-Link V2. El usuario comprobó la comunicación SWD mediante STM32CubeProgrammer 2.23.0 en Hot Plug: ID `0x413`, Cortex-M4, familia STM32F405/F407/F415/F417 y 512 KB de Flash. La frecuencia solicitada fue 1000 kHz y la utilizada, 950 kHz. Esa identificación es consistente con el destino previsto, sin identificar por sí sola el encapsulado o la revisión física de la placa.
 
-La configuración `STM32: Depurar con ST-Link` en `.vscode/launch.json` usa el adaptador de la extensión oficial, solicita 1000 kHz y selecciona `Software system reset`. El usuario ya la utilizó para la prueba de plataforma; el log mostró un reset de sistema y la fase de programación de CubeProgrammer en Under Reset/Hardware reset. No se ha utilizado para cargar esta nueva prueba SPI. Se detiene al llegar a `main`; iniciarla programa la imagen Debug y reinicia el microcontrolador, por lo que no es una conexión Hot Plug de solo identificación.
+La configuración `STM32: Depurar con ST-Link` en `.vscode/launch.json` usa el adaptador de la extensión oficial, solicita 1000 kHz y selecciona `Software system reset`. El usuario ya la utilizó para pruebas anteriores; el log mostró un reset de sistema y la fase de programación de CubeProgrammer en Under Reset/Hardware reset. La carga USB de esta sesión se hizo con CLI, modo Normal, núcleo detenido y reset por software. La configuración de VS Code se conserva: se detiene al llegar a `main`; iniciarla programa Debug y reinicia el microcontrolador, por lo que no es una conexión Hot Plug de solo identificación.
 
 ## Carga y observación de la plataforma por SWD
 
@@ -120,7 +122,9 @@ Las referencias existentes incluyen nombres STM32F407VGT6 y no constituyen una v
 
 El código reutilizable podrá ubicarse en [../shared/](../shared/README.md).
 
-## Presión y temperatura: 200 Hz nominales con INT en PB0 (sin cargar)
+## Presión y temperatura: 200 Hz nominales con INT en PB0
+
+Esta etapa fue cargada y probada por el usuario antes de añadir altura: informó aproximadamente 196 Hz efectivos, presión de 83994 Pa, temperatura de 26,10 grados Celsius y cero incidencias en los contadores mostrados. Esa prueba no valida la nueva etapa de altura, la exactitud con instrumentos externos, pérdida cero ni vuelo. Los pasos de programación siguientes son manuales; el agente no programa la placa.
 
 Se conserva el cableado y SPI1 a 1 MHz nominal. PB0 ahora usa EXTI0 por flanco ascendente, con una resistencia interna débil de bajada. El BMP388 se configura con salida INT push-pull, activa en alto y no enclavada. No se usa FIFO ni se cambia el bus a SPI de tres señales.
 
@@ -180,11 +184,77 @@ Las variables originales de identificación se conservan para consultas de salud
 
 Se mantienen los códigos anteriores de `g_bmp388_last_result` y se añaden: **8** calibración inválida; **9** lectura de configuración distinta de lo solicitado; **10** no hay datos nuevos; **11** compensación fuera de rango/no finita; **12** ausencia de tramas durante 100 ms. El valor normal al completar una muestra es **1**. Durante la espera inicial tras reset puede mostrarse transitoriamente **6**.
 
-Sin FIFO y sin un contador de conversiones del sensor, los diagnósticos permiten detectar algunas pérdidas/acumulaciones, pero no demostrar pérdida cero. No se implementan altura barométrica, SD, serial, BMI160 ni FreeRTOS en esta etapa.
+Sin FIFO y sin un contador de conversiones del sensor, los diagnósticos permiten detectar algunas pérdidas/acumulaciones, pero no demostrar pérdida cero. La altura añadida después de esta adquisición se describe abajo. La salida USB CDC ya está implementada; SD, UART, BMI160 y FreeRTOS siguen pendientes.
+
+## Alturas barométricas relativa y estimada (cargadas y observadas por USB)
+
+Se conservan SPI1, configuración del BMP388, interrupciones y los siete pares de módulos. La aplicación entrega una muestra a `barometric_altitude` una sola vez después de adquirirla, fuera de las interrupciones, y solamente si `g_bmp388_sample_flags == 1`: nueva, numéricamente válida, sin acumulación ni incertidumbre temporal ni periodo largo. Un despertar sin muestra no suma al promedio ni actualiza el filtro. Esto es más estricto que comprobar solamente `g_bmp388_sample_valid`.
+
+### Modelo, unidades y filtro
+
+Se usa la aproximación de [altura de presión de NOAA/NWS](https://www.weather.gov/media/epz/wxcalc/pressureAltitude.pdf), convertida de pies/hPa a metros/Pa. Sus constantes redondeadas se mantienen juntas en el módulo:
+
+```text
+H(P) = 44307.69396 m * [1 - (P / 101325 Pa)^0.190284]
+h_rel = H(P_actual) - H(P_referencia)
+```
+
+`101325 Pa` es una constante del modelo atmosférico, no el cero local impuesto. La referencia es la media realmente adquirida en el punto inicial. Presiones iguales producen altura cero; menor presión da altura positiva y mayor presión da altura negativa. Se trata de una altura barométrica calculada bajo atmósfera estándar, no de una distancia directa al suelo ni de una altitud absoluta validada. Se admite el mismo intervalo numérico de presión que el controlador, 30000..125000 Pa. No se emplea la temperatura del chip como temperatura del aire y no se recortan presiones para aceptarlas.
+
+La salida sin filtrar se conserva. La suavizada usa un paso bajo de primer orden, discretizado por Euler hacia atrás, con constante de tiempo `tau = 0,5 s`:
+
+```text
+dt = resta modular entre timestamps de muestras limpias, en microsegundos
+alpha = dt / (500000 + dt)
+filtrada += alpha * (h_rel - filtrada)
+```
+
+El filtro usa el intervalo observado, sin asumir exactamente 200 Hz. Su primera salida es la primera altura calculada, sin rampa artificial desde cero. También se reinicializa con la primera muestra limpia después de un fallo, conservando la referencia establecida. A 5 ms por muestra, un escalón alcanza aproximadamente el 63 % en 0,5 s y el 95 % en 1,5 s. Estos son resultados del modelo del filtro; su comportamiento con la placa está pendiente. `g_bmp388_read_duration_us` sigue midiendo SPI y compensación; no incluye el cálculo posterior de altura.
+
+### Captura y renovación de la referencia
+
+1. Después del arranque se esperan **10 segundos de muestras limpias y continuas**, desde la primera muestra aceptada. Si falla esa continuidad durante la espera, los diez segundos empiezan de nuevo. Esta espera no garantiza equilibrio térmico.
+2. A continuación se promedian **3 segundos completos**, con la placa quieta. Se usa la media y desviación estándar muestral de Welford, en `double`, sin guardar una lista ni reservar memoria dinámica. La ventana se mide por tiempo, no por un número fijo: unas 590 muestras a la cadencia observada y 601 en la simulación de 200 Hz que incluye ambos extremos.
+3. Una muestra inválida, un aviso sin dato nuevo, incertidumbre temporal, eventos acumulados o un intervalo entre muestras superior a 10000 us descartan la ventana incompleta y empiezan otra. No se repiten los diez segundos si ya se completaron. Timestamps repetidos tampoco añaden muestras. Si no llegan muestras limpias durante 100 ms, se invalida la salida y cualquier captura incompleta.
+4. Al completar la ventana se publican presión media, cantidad y desviación estándar en Pa. La desviación es un diagnóstico de dispersión, no una prueba de precisión o inmovilidad. No se impone un umbral de quietud sin validar; el operador debe mantener la placa quieta.
+5. La referencia queda fija durante el movimiento y ante fallos/reintentos del sensor. Los fallos invalidan la altura, sin redefinir automáticamente el cero. Las últimas alturas pueden seguir visibles con `g_baro_valid = 0`; no deben interpretarse como actuales. Un reset del MCU inicia una referencia nueva.
+6. Escribir **`g_baro_zero_request = 1`** solicita otro cero. El bucle principal lo consume y lo vuelve a `0`; no reinicia el MCU ni el BMP388. Invalida y pone a cero las publicaciones de la referencia/altura anterior mientras captura tres segundos nuevos. Si los diez segundos iniciales aún no se habían completado, primero vuelve a cumplir esa espera. La orden solo puede ejecutarse cuando se reanuda el núcleo.
+
+### Watch y prueba física manual pendiente
+
+Esta implementación pasó pruebas con un sensor simulado y después se cargó y verificó mediante SWD con autorización del usuario. Se observaron ambas alturas por USB y se comprobó la captura manual del cero desde la ventana de PC; falta contrastar la altura con desplazamientos medidos. Watch se conserva como diagnóstico alternativo. La configuración existente **STM32: Depurar con ST-Link** sigue disponible: F5 programa Flash y reinicia el MCU; no confundirlo con compilar.
+
+| Watch | Qué comprobar |
+| --- | --- |
+| `g_baro_state` | `0` espera muestras, `1` espera inicial de 10 s, `2` captura de 3 s, `3` referencia lista. El estado 3 no sustituye a `g_baro_valid`. |
+| `g_baro_state_elapsed_ms` | Tiempo entre muestras aceptadas de la etapa de espera/captura; al terminar queda cercano a 3000 ms. |
+| `g_baro_reference_ready` | `1` solo cuando se ha completado el cero. |
+| `g_baro_reference_pa` | Media local en Pa; debe permanecer fija después de la captura y durante el movimiento. |
+| `g_baro_reference_samples` | Muestras de la ventana actual; tras finalizar, cantidad usada en la referencia. No incluye las de espera inicial. |
+| `g_baro_reference_std_pa` | Desviación estándar muestral de la ventana completada, en Pa. |
+| `g_baro_reference_restart_count` | Ventanas incompletas interrumpidas desde el reset; una orden manual no cuenta como fallo. |
+| `g_baro_altitude_relative_m` | Altura calculada sin filtrar en metros. |
+| `g_baro_altitude_filtered_m` | Altura suavizada en metros, con tau de 0,5 s. |
+| `g_baro_valid` | `1` para una altura vigente obtenida de muestras limpias con referencia completa. Leer las alturas solo con este valor y `reference_ready` en 1. |
+| `g_baro_zero_request` | Única variable de esta tabla que se debe editar: escribir `1` para solicitar otro cero. |
+
+Procedimiento después de una carga manual autorizada por el usuario:
+
+1. En la parada inicial de `main`, añadir la tabla a Watch, además de `g_bmp388_state`, `g_bmp388_sample_flags`, `g_bmp388_sample_count`, ambas tasas y los contadores de errores, acumulaciones y timeout. Mantener la placa quieta y evitar soplar sobre el sensor o corrientes de aire.
+2. Continuar y esperar **al menos 15 segundos sin pausas ni breakpoints**. Pausar preferiblemente en el bucle principal, fuera de la publicación de variables. Esperar estado BMP388 `2`, estado barométrico `3`, `reference_ready = 1`, `valid = 1`, muestras y tasas coherentes y referencia cercana a la presión local. La altura estará alrededor de cero con ruido; no debe ser exactamente cero.
+3. Reanudar, subir la placa aproximadamente **1–2 m**, mantenerla quieta al menos cinco segundos y pausar para leer: la altura filtrada debe cambiar hacia valores positivos y la referencia debe conservarse. Comparar también la salida sin filtrar. Repetir al regresar al punto inicial y al bajar por debajo de él: cerca de cero y signo negativo, respectivamente. El ruido y la deriva pueden ocultar movimientos pequeños; esto no prueba exactitud métrica.
+4. Para renovar el cero, detenerse con la placa quieta en el punto elegido, escribir `g_baro_zero_request = 1`, reanudar al menos cinco segundos y volver a pausar. Deben verse orden consumida `0`, nueva referencia lista y altura otra vez alrededor de cero. La nueva referencia solo debe cambiar por esta orden o por reset del MCU.
+5. Si no termina la referencia, comprobar estados, avance del contador y `reference_restart_count`, además de las banderas BMP388. Si `g_baro_valid = 0`, no interpretar las alturas antiguas ni suponer que una cifra cero representa una medición válida.
+
+Durante una pausa SWD el BMP388 sigue midiendo y TIM5 se congela. El firmware no puede detectar exhaustivamente ese tiempo físico ni garantizar que una captura pausada sea continua. Si se pausa durante la captura, dejar ejecutar más de diez segundos para completar la espera si fuera necesario y luego pedir un nuevo cero con la placa quieta, dejándolo ejecutar sin pausas. Para comparar frecuencias tras cualquier pausa, dejar al menos cinco segundos de ejecución libre. Los `double` y el conjunto de publicaciones de Watch no son atómicos.
+
+El filtro reduce fluctuaciones y añade retraso; promediar la referencia no elimina el ruido de cada lectura posterior. Los cambios meteorológicos y térmicos pueden desplazar la altura estimada. No se declara precisión centimétrica, pérdida cero ni validación de vuelo.
+
+La segunda salida usa directamente `H(P_actual)` con presión estándar de 101325 Pa, sin referencia meteorológica QNH. `g_baro_altitude_estimated_m` conserva el resultado sin filtrar y `g_baro_altitude_estimated_filtered_m` aplica el mismo filtro de 0,5 s. `g_baro_estimated_valid` es independiente de la captura de referencia relativa: la altitud estimada puede ser válida durante la espera/captura. Una orden de cero relativo no reinicia ni desplaza la segunda salida; una pérdida de muestras sí invalida ambas. La ventana recibe las dos alturas filtradas, ambas en metros.
 
 ### Comprobaciones de software reproducibles
 
-`tests/check_bmp388.c` se compila para ARM y se ejecuta con un transporte de registros simulado mediante `tests/run_bmp388_checks.py`. Los vectores de compensación se generan independientemente con aritmética decimal de 60 dígitos y ejercitan los 14 coeficientes, incluidos valores con signo. También se verifican datos nuevos, configuración, errores, notificaciones acumuladas, eventos durante una lectura, frecuencia simulada de 200 Hz, timeouts, valores fuera de rango, recuperación y desbordamiento de los relojes. La prueba actual pasa **103 aserciones**.
+`tests/check_bmp388.c` se compila para ARM y se ejecuta con un transporte de registros simulado mediante `tests/run_bmp388_checks.py`. Los vectores de compensación se generan independientemente con aritmética decimal de 60 dígitos y ejercitan los 14 coeficientes, incluidos valores con signo. También se verifican datos nuevos, configuración, errores, notificaciones acumuladas, eventos durante una lectura, frecuencia simulada de 200 Hz, timeouts, valores fuera de rango, recuperación y desbordamiento de los relojes. Se conservan las comprobaciones anteriores y se añaden captura de referencia, media/desviación, rechazo de duplicados y ventanas incompletas, signos y vectores independientes de altura, filtro con intervalos variables, cadencia cercana a 196 Hz, cero manual, conservación de la referencia ante fallos e independencia/obsolescencia de la altitud estimada. La prueba actual pasa **183 aserciones, cero fallos**. Los vectores de altura y las estadísticas esperadas también se calculan con Decimal de 60 dígitos, sin usar las funciones matemáticas C del módulo. El monitor añade ocho pruebas del decodificador, que también pasaron.
 
 Requiere Python y `unicorn==2.1.4`. La dependencia de estas pruebas está aislada en `build/checks/python_deps`; no se modificó Python global. Para repetir desde esta carpeta con un Python que tenga esa dependencia disponible:
 
@@ -192,4 +262,13 @@ Requiere Python y `unicorn==2.1.4`. La dependencia de estas pruebas está aislad
 python tests/run_bmp388_checks.py
 ```
 
-El script localiza GCC ARM en los bundles de STM32, admite `--toolchain-bin` y solo genera archivos de prueba bajo `build/checks/acquisition`. Compila el mismo controlador y aplicación para un núcleo ARM sin FPU, con operaciones de doble precisión por software; el firmware real se compila aparte para Cortex-M4F. La emulación no ejecuta los registros de plataforma ni demuestra frecuencia, conexiones eléctricas o comportamiento de vuelo. No ejecuta herramientas de programación.
+El script localiza GCC ARM en los bundles de STM32, admite `--toolchain-bin` y solo genera archivos de prueba bajo `build/checks/acquisition`. Compila el mismo controlador, aplicación y módulo de altura para un núcleo ARM sin FPU, con operaciones de doble precisión por software; el firmware real se compila aparte para Cortex-M4F. La emulación no ejecuta los registros de plataforma ni demuestra frecuencia, conexiones eléctricas o comportamiento de vuelo. No ejecuta herramientas de programación.
+
+Las compilaciones de esta etapa terminaron correctamente en Debug y Release, enlazando la biblioteca matemática después de los objetos. Tamaños informados por el enlazador (la RAM incluye las reservas configuradas de heap/stack, no una medición de uso máximo en ejecución):
+
+| Configuración | Flash | RAM principal | CCM |
+| --- | --- | --- | --- |
+| Debug | 71052 bytes | 9960 bytes | 0 bytes |
+| Release | 55540 bytes | 9960 bytes | 0 bytes |
+
+También pasaron el análisis estático GCC con avisos estrictos de `main`, `bmp388`, `application`, `barometric_altitude` y `serial_output`, y `git diff --check`. Estas verificaciones de software se complementaron con la prueba física USB descrita en [usb/README.md](usb/README.md). En la sesión del agente, el alias Python y los ejecutables ARM requirieron ejecución autorizada fuera del entorno restringido de Windows. Se conservaron las tareas de VS Code. La carga posterior fue autorizada expresamente, guardó respaldo y reemplazó/verificó los sectores necesarios de Flash; no se borraron archivos. La invocación de `cube.exe cmake` no resolvió el subcomando en esa sesión, de modo que se usó CMake 4.4.0+st.1 directamente desde los bundles, con GCC 14.3.1+st.2 en el PATH del proceso.

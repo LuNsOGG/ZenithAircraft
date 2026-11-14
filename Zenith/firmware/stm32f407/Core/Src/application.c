@@ -1,5 +1,6 @@
 #include "application.h"
 #include "main.h"
+#include "barometric_altitude.h"
 
 /* Cooperative startup waits and one health probe/second while streaming.
  * Samples are requested only by data-ready notifications, never by this tick.
@@ -60,6 +61,7 @@ static uint32_t rate_start_irqs;
 
 void Application_Init(bmp388_read_fn read, bmp388_write_fn write, uint32_t tick)
 {
+    BarometricAltitude_Init();
     sensor = (bmp388_device_t){.read = read, .write = write};
     last_probe_tick = tick;
     state_tick = tick;
@@ -121,6 +123,7 @@ static bmp388_result_t Probe(uint32_t tick)
 
 static void Retry(bmp388_result_t result, uint32_t tick)
 {
+    BarometricAltitude_Invalidate();
     g_bmp388_last_result = (uint32_t)result;
     g_bmp388_configured = g_bmp388_sample_valid = g_bmp388_rate_valid = 0U;
     g_bmp388_calibration_valid = 0U;
@@ -194,11 +197,17 @@ static void ServiceDataReady(void)
         ++g_bmp388_error_count;
     }
     g_bmp388_sample_flags = flags;
+    if (flags == BMP388_SAMPLE_VALID) {
+        BarometricAltitude_Update(sample.pressure_pa, timestamp);
+    } else {
+        BarometricAltitude_Invalidate();
+    }
 }
 
 void Application_Poll(uint32_t tick)
 {
     bmp388_result_t result;
+    BarometricAltitude_Poll(Platform_TimeUs());
     if (g_bmp388_state == 0U || g_bmp388_state == 3U) {
         const uint32_t delay = g_bmp388_state == 0U ? FIRST_PROBE_TICKS : PROBE_PERIOD_TICKS;
         if ((uint32_t)(tick - state_tick) < delay) {
@@ -259,6 +268,7 @@ void Application_Poll(uint32_t tick)
     }
     const uint32_t now = Platform_TimeUs();
     if ((uint32_t)(now - last_frame_us) >= SAMPLE_TIMEOUT_US) {
+        BarometricAltitude_Invalidate();
         g_bmp388_sample_valid = 0U;
         g_bmp388_sample_flags = (g_bmp388_sample_flags & ~(uint32_t)BMP388_SAMPLE_VALID) | BMP388_SAMPLE_STALE;
         g_bmp388_last_result = BMP388_DATA_TIMEOUT;

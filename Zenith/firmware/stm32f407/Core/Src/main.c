@@ -18,17 +18,21 @@
 
 #include "main.h"
 #include "application.h"
+#include "serial_output.h"
 
 #include <stddef.h>
 
 /* Minimal register subset for this platform check, from ST RM0090 and PM0214.
- * SPI1/PB0 are used for BMP388 acquisition; no HAL/RTOS/HSE.
+ * SPI1/PB0 acquire BMP388 data. Only USB uses HSE/PLL; no HAL or RTOS.
  * Keep these definitions private until the platform libraries are integrated.
  */
 #define REG32(address) (*(volatile uint32_t *)(uintptr_t)(address))
 #define REG8(address)  (*(volatile uint8_t *)(uintptr_t)(address))
 
 #define RCC_CR          REG32(0x40023800U)
+#define RCC_PLLCFGR     REG32(0x40023804U)
+#define RCC_AHB2RSTR    REG32(0x40023814U)
+#define RCC_AHB2ENR     REG32(0x40023834U)
 #define RCC_CFGR        REG32(0x40023808U)
 #define RCC_APB1RSTR    REG32(0x40023820U)
 #define RCC_APB1ENR     REG32(0x40023840U)
@@ -63,6 +67,7 @@
 #define GPIOA_PUPDR     REG32(0x4002000CU)
 #define GPIOA_BSRR      REG32(0x40020018U)
 #define GPIOA_AFRL      REG32(0x40020020U)
+#define GPIOA_AFRH      REG32(0x40020024U)
 #define GPIOB_MODER     REG32(0x40020400U)
 #define GPIOB_PUPDR     REG32(0x4002040CU)
 #define BMP388_CS_HIGH  (1U << 4)
@@ -257,6 +262,46 @@ uint32_t Platform_TimeUs(void)
     return TIM5_CNT;
 }
 
+uint32_t Platform_USB_Init(void)
+{
+    uint32_t remaining = CLOCK_WAIT_LIMIT;
+    /* HCLK/PCLK/TIM clocks stay at HSI 16 MHz. PLL is USB-only.
+     * Reference schematic Y2: 8 MHz. M=8, N=192, Q=4 -> USB 48 MHz.
+     */
+    RCC_CR &= ~(1U << 24);
+    while ((RCC_CR & (1U << 25)) != 0U) {
+        if (--remaining == 0U) return 2U;
+    }
+    RCC_CR |= 1U << 16;
+    remaining = CLOCK_WAIT_LIMIT;
+    while ((RCC_CR & (1U << 17)) == 0U) {
+        if (--remaining == 0U) return 1U;
+    }
+    RCC_PLLCFGR = 8U | (192U << 6) | (1U << 16) | (1U << 22) | (4U << 24);
+    RCC_CR |= 1U << 24;
+    remaining = CLOCK_WAIT_LIMIT;
+    while ((RCC_CR & (1U << 25)) == 0U) {
+        if (--remaining == 0U) return 3U;
+    }
+    RCC_AHB1ENR |= 1U;
+    (void)RCC_AHB1ENR;
+    GPIOA_OTYPER &= ~((1U << 11) | (1U << 12));
+    GPIOA_PUPDR &= ~(0xFU << 22);
+    GPIOA_OSPEEDR |= 0xFU << 22;
+    GPIOA_AFRH = (GPIOA_AFRH & ~((0xFU << 12) | (0xFU << 16))) |
+                  (10U << 12) | (10U << 16);
+    GPIOA_MODER = (GPIOA_MODER & ~(0xFU << 22)) | (0xAU << 22);
+    RCC_AHB2ENR |= 1U << 7;
+    (void)RCC_AHB2ENR;
+    RCC_AHB2RSTR |= 1U << 7;
+    RCC_AHB2RSTR &= ~(1U << 7);
+    /* Bus-powered board: PA9 is not wired to VBUS in the reference schematic.
+     * Disable VBUS sensing; only USB powers the board during USB operation.
+     */
+    REG32(0x50000038U) = (1U << 21);
+    return 0U;
+}
+
 static void Platform_DataReadyInit(void)
 {
     NVIC_ICER0 = EXTI0_IRQ_BIT;
@@ -387,6 +432,7 @@ int main(void)
     Application_Init(Platform_SPI_Read, Platform_SPI_Write, g_tim2_irq_count);
     g_platform_ready = 1U;
     __asm volatile ("cpsie i" ::: "memory");
+    SerialOutput_Init();
 
     for (;;) {
         __asm volatile ("dsb 0xF\n\twfi" ::: "memory");
@@ -395,5 +441,6 @@ int main(void)
          */
         ++g_main_wake_count;
         Application_Poll(g_tim2_irq_count);
+        SerialOutput_Poll();
     }
 }

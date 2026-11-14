@@ -26,5 +26,9 @@ void EXTI0_IRQHandler(void);
 void HardFault_Handler(void);
 /* Free-running TIM5 at 1 MHz nominal; wraps every ~71.6 min and freezes on halt. */
 uint32_t Platform_TimeUs(void);
+/* USB-only PLL from the reference board's 8 MHz HSE; CPU remains HSI 16 MHz.
+ * Returns 0 ready, 1 HSE timeout, 2 PLL-stop timeout, 3 PLL-start timeout.
+ */
+uint32_t Platform_USB_Init(void);
 
 #endif

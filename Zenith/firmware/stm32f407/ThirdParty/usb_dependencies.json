@@ -1,0 +1,23 @@
+[
+  {
+    "name": "tinyusb",
+    "version": "0.18.0",
+    "url": "https://codeload.github.com/hathach/tinyusb/zip/refs/tags/0.18.0",
+    "sha256": "2a0b7229b0b7e9e67663c92df4579158f3a6386818bd16708a0cecfd8596644f",
+    "files": 49
+  },
+  {
+    "name": "cmsis_device_f4",
+    "version": "v2.6.10",
+    "url": "https://codeload.github.com/STMicroelectronics/cmsis-device-f4/zip/refs/tags/v2.6.10",
+    "sha256": "27417faf91fe45cdac11bd4f5b94a8c6f58512cfd37d3a879f07f055feb82725",
+    "files": 4
+  },
+  {
+    "name": "cmsis_core",
+    "version": "5.9.0",
+    "url": "https://codeload.github.com/ARM-software/CMSIS_5/zip/refs/tags/5.9.0",
+    "sha256": "3d4bfaf8783c633149510d098630a9d2f273dc090ea5e807103cc9b7acbb6708",
+    "files": 31
+  }
+]

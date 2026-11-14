@@ -47,9 +47,20 @@ for raw_t in (5000000, 6400000, 7700000, 10000000):
         pressure += p*(c[0] + c[1]*temp + c[2]*temp**2 + c[3]*temp**3)
         pressure += p**2*c[8] + p**2*temp*c[9] + p**3*c[10]
         vectors.append(f"{{{raw_p}U, {raw_t}U, {float(pressure):.17g}, {float(temp):.17g}}}")
+altitude_vectors = []
+height = lambda pressure: D("44307.69396") * (1 - (pressure / D(101325)) ** D("0.190284"))
+for pressure in (84000, 83990, 84010, 101325, 30000, 125000):
+    relative = height(D(pressure)) - height(D(84000))
+    altitude_vectors.append(f"{{{pressure}.0, {float(relative):.17g}}}")
+noisy_mean = D(84000) - D(2) / D(601)
+noisy_std = ((D(601) * 4 - D(4) / D(601)) / D(600)).sqrt()
 (OUT / "golden_vectors.h").write_text(
     "static const struct {uint32_t p,t; double pressure,temperature;} golden[] = {\n" +
-    ",\n".join(vectors) + "\n};\n", encoding="ascii")
+    ",\n".join(vectors) + "\n};\n" +
+    "static const struct {double pressure,relative;} altitude_golden[] = {\n" +
+    ",\n".join(altitude_vectors) + "\n};\n" +
+    f"static const double noisy_mean = {float(noisy_mean):.17g};\n" +
+    f"static const double noisy_std = {float(noisy_std):.17g};\n", encoding="ascii")
 linker = OUT / "checks.ld"
 linker.write_text("""ENTRY(Test_Run)
 MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 1M
@@ -65,6 +76,7 @@ elf = OUT / "checks.elf"
 subprocess.run([str(tools / "arm-none-eabi-gcc.exe"), "-mcpu=cortex-m3", "-mthumb", "-mfloat-abi=soft",
     "-std=gnu11", "-O0", "-g3", "-Wall", "-Wextra", "-Werror", "-ffunction-sections", "-fdata-sections",
     "-ICore/Inc", f"-I{OUT}", "tests/check_bmp388.c", "Core/Src/bmp388.c", "Core/Src/application.c",
+    "Core/Src/barometric_altitude.c",
     "-nostdlib", f"-Wl,-T,{linker}", "-Wl,--gc-sections", "-Wl,--start-group", "-lc", "-lm", "-lgcc",
     "-Wl,--end-group", "-o", str(elf)], cwd=ROOT, check=True)
 nm = subprocess.check_output([str(tools / "arm-none-eabi-nm.exe"), "-n", str(elf)], text=True)
@@ -84,7 +96,7 @@ for i in range(phnum):
             uc.mem_write(vaddr, data[offset:offset+filesz])
 uc.reg_write(UC_ARM_REG_SP, 0x20020000)
 uc.reg_write(UC_ARM_REG_LR, symbols["Test_Done"] | 1)
-uc.emu_start(symbols["Test_Run"] | 1, symbols["Test_Done"], count=10000000)
+uc.emu_start(symbols["Test_Run"] | 1, symbols["Test_Done"], count=150000000)
 assert uc.reg_read(UC_ARM_REG_PC) == symbols["Test_Done"], "Instruction limit reached before tests completed"
 read_word = lambda name: struct.unpack("<I", uc.mem_read(symbols[name], 4))[0]
 count, failures, first = [read_word(name) for name in ("test_count", "test_failures", "test_first_failure")]

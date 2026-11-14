@@ -1,6 +1,7 @@
 /* Software-only checks: compiled ARM C, mocked register transport, no hardware. */
 #include "application.h"
 #include "main.h"
+#include "barometric_altitude.h"
 #include <math.h>
 #include <string.h>
 #include "golden_vectors.h"
@@ -91,6 +92,146 @@ static void NewData(uint32_t timestamp)
 
 void Test_Done(void) { for (;;) { __asm volatile ("nop"); } }
 
+static void CheckAltitude(void)
+{
+    /* TIM5 wraps during the capture window. All times are unsigned modular. */
+    const uint32_t origin = UINT32_MAX - 11002000U;
+    uint32_t timestamp = origin;
+    BarometricAltitude_Init();
+    CHECK(g_baro_state == BARO_WAITING && g_baro_valid == 0U);
+    BarometricAltitude_Poll(origin);
+    CHECK(g_baro_reference_ready == 0U && g_baro_reference_samples == 0U);
+    for (uint32_t i = 0U; i <= 2600U; ++i) {
+        timestamp = origin + i * 5000U;
+        BarometricAltitude_Poll(timestamp);
+        BarometricAltitude_Update(84000.0, timestamp);
+        if (i == 1999U) {
+            CHECK(g_baro_state == BARO_WARMUP && g_baro_reference_samples == 0U);
+        }
+        if (i == 2000U) {
+            CHECK(g_baro_state == BARO_CAPTURING && g_baro_reference_samples == 1U);
+        }
+        if (i == 2599U) CHECK(g_baro_reference_ready == 0U);
+    }
+    CHECK(g_baro_reference_ready == 1U && g_baro_state == BARO_READY);
+    CHECK(g_baro_reference_samples == 601U && g_baro_state_elapsed_ms == 3000U);
+    CHECK(g_baro_reference_pa == 84000.0 && g_baro_reference_std_pa == 0.0);
+    CHECK(g_baro_valid == 1U && g_baro_altitude_relative_m == 0.0);
+    CHECK(g_baro_altitude_filtered_m == 0.0);
+
+    timestamp += 5000U;
+    BarometricAltitude_Update(83990.0, timestamp);
+    const double first_filter = altitude_golden[1].relative * (5000.0 / 505000.0);
+    CHECK(g_baro_altitude_relative_m > 0.0);
+    CHECK(fabs(g_baro_altitude_filtered_m - first_filter) < 1e-9);
+    timestamp += 7000U;
+    BarometricAltitude_Update(84010.0, timestamp);
+    const double second_filter = first_filter + (7000.0 / 507000.0) *
+                                (altitude_golden[2].relative - first_filter);
+    CHECK(g_baro_altitude_relative_m < 0.0);
+    CHECK(fabs(g_baro_altitude_filtered_m - second_filter) < 1e-9);
+    for (uint32_t i = 0U; i < sizeof(altitude_golden)/sizeof(altitude_golden[0]); ++i) {
+        timestamp += 5000U;
+        BarometricAltitude_Update(altitude_golden[i].pressure, timestamp);
+        CHECK(g_baro_valid == 1U);
+        CHECK(fabs(g_baro_altitude_relative_m - altitude_golden[i].relative) < 1e-8);
+    }
+    CHECK(g_baro_reference_pa == 84000.0 && g_baro_reference_samples == 601U);
+    BarometricAltitude_Invalidate();
+    CHECK(g_baro_valid == 0U && g_baro_reference_ready == 1U);
+    timestamp += 5000U;
+    BarometricAltitude_Update(83990.0, timestamp);
+    CHECK(g_baro_altitude_filtered_m == g_baro_altitude_relative_m);
+    BarometricAltitude_Poll(timestamp + 99999U);
+    CHECK(g_baro_valid == 1U);
+    BarometricAltitude_Poll(timestamp + 100000U);
+    CHECK(g_baro_valid == 0U && g_baro_reference_pa == 84000.0);
+    BarometricAltitude_Update(NAN, timestamp + 105000U);
+    CHECK(g_baro_valid == 0U);
+    BarometricAltitude_Update(INFINITY, timestamp + 110000U);
+    CHECK(g_baro_valid == 0U);
+    BarometricAltitude_Update(29999.0, timestamp + 115000U);
+    CHECK(g_baro_valid == 0U);
+    BarometricAltitude_Update(125001.0, timestamp + 120000U);
+    CHECK(g_baro_valid == 0U && g_baro_reference_ready == 1U);
+
+    timestamp += 125000U;
+    g_baro_zero_request = 1U;
+    BarometricAltitude_Poll(timestamp);
+    CHECK(g_baro_zero_request == 0U && g_baro_reference_ready == 0U);
+    CHECK(g_baro_state == BARO_CAPTURING && g_baro_valid == 0U);
+    CHECK(g_baro_reference_samples == 0U);
+    BarometricAltitude_Update(84000.0, timestamp);
+    BarometricAltitude_Update(84000.0, timestamp); /* Duplicate cannot count twice. */
+    CHECK(g_baro_reference_samples == 0U && g_baro_reference_restart_count == 1U);
+    timestamp += 5000U;
+    BarometricAltitude_Update(84000.0, timestamp);
+    timestamp += 10001U;
+    BarometricAltitude_Update(84000.0, timestamp); /* Incomplete window restarts. */
+    CHECK(g_baro_reference_samples == 0U && g_baro_reference_restart_count == 2U);
+    timestamp += 5000U;
+    const uint32_t capture_origin = timestamp;
+    for (uint32_t i = 0U; i <= 600U; ++i) {
+        timestamp = capture_origin + i * 5000U;
+        BarometricAltitude_Update(84000.0 + (i % 2U != 0U ? 2.0 : -2.0), timestamp);
+    }
+    CHECK(g_baro_reference_ready == 1U && g_baro_reference_samples == 601U);
+    CHECK(fabs(g_baro_reference_pa - noisy_mean) < 1e-8);
+    CHECK(fabs(g_baro_reference_std_pa - noisy_std) < 1e-8);
+    timestamp += 5000U;
+    BarometricAltitude_Update(noisy_mean, timestamp);
+    CHECK(fabs(g_baro_altitude_relative_m) < 1e-8);
+    /* A constant-pressure filter step approaches 63% after one tau. */
+    BarometricAltitude_Invalidate();
+    timestamp += 5000U;
+    BarometricAltitude_Update(noisy_mean, timestamp);
+    for (uint32_t i = 0U; i < 100U; ++i) {
+        timestamp += 5000U;
+        BarometricAltitude_Update(83990.0, timestamp);
+    }
+    CHECK(g_baro_altitude_filtered_m / g_baro_altitude_relative_m > 0.62);
+    CHECK(g_baro_altitude_filtered_m / g_baro_altitude_relative_m < 0.64);
+
+    /* An interruption before ten seconds requires another continuous warmup. */
+    BarometricAltitude_Init();
+    BarometricAltitude_Update(84000.0, 1000U);
+    BarometricAltitude_Invalidate();
+    BarometricAltitude_Update(84000.0, 12000000U);
+    CHECK(g_baro_state == BARO_WARMUP && g_baro_state_elapsed_ms == 0U);
+    CHECK(g_baro_reference_ready == 0U && g_baro_reference_samples == 0U);
+
+    /* Near the observed 196 Hz: capture is time-based, not fixed at 600 frames.
+     * Here the 32-bit counter wraps during the ten-second warmup.
+     */
+    BarometricAltitude_Init();
+    const uint32_t slow_origin = UINT32_MAX - 5000000U;
+    for (uint32_t i = 0U; i <= 2550U; ++i) {
+        timestamp = slow_origin + i * 5102U;
+        BarometricAltitude_Poll(timestamp);
+        BarometricAltitude_Update(85000.0, timestamp);
+        if (i == 1960U) CHECK(g_baro_state == BARO_WARMUP);
+        if (i == 2549U) CHECK(g_baro_reference_ready == 0U);
+    }
+    CHECK(g_baro_reference_ready == 1U && g_baro_valid == 1U);
+    CHECK(g_baro_reference_samples == 590U && g_baro_reference_pa == 85000.0);
+    CHECK(g_baro_altitude_relative_m == 0.0 && g_baro_reference_std_pa == 0.0);
+    CHECK(g_baro_estimated_valid == 1U);
+    CHECK(g_baro_altitude_estimated_m > 1400.0 && g_baro_altitude_estimated_m < 1600.0);
+    const double absolute_before_zero = g_baro_altitude_estimated_m;
+    const double absolute_filtered_before_zero = g_baro_altitude_estimated_filtered_m;
+    g_baro_zero_request = 1U;
+    BarometricAltitude_Poll(timestamp);
+    CHECK(g_baro_valid == 0U && g_baro_estimated_valid == 1U);
+    CHECK(g_baro_altitude_estimated_m == absolute_before_zero);
+    CHECK(g_baro_altitude_estimated_filtered_m == absolute_filtered_before_zero);
+    BarometricAltitude_Poll(timestamp + 100000U);
+    CHECK(g_baro_estimated_valid == 0U); /* Manual zero cannot hide stale data. */
+    BarometricAltitude_Update(101325.0, timestamp + 105000U);
+    CHECK(g_baro_estimated_valid == 1U && g_baro_altitude_estimated_m == 0.0);
+    CHECK(g_baro_altitude_estimated_filtered_m == 0.0);
+    CHECK(g_baro_valid == 0U); /* Absolute altitude works before reference capture. */
+}
+
 void Test_Run(void)
 {
     bmp388_calibration_t calibration;
@@ -125,9 +266,11 @@ void Test_Run(void)
     CHECK(fabs(g_bmp388_pressure_pa - golden[10].pressure) < 1e-7);
     CHECK(fabs(g_bmp388_temperature_c - golden[10].temperature) < 1e-10);
     CHECK(g_bmp388_read_duration_us == 60U && g_bmp388_sample_time_us == 1120000U);
+    CHECK(g_baro_state == BARO_WARMUP && g_baro_reference_ready == 0U);
 
     Application_DataReadyISR(now_us); Application_Poll(1121U);
     CHECK(g_bmp388_no_data_count == 1U && g_bmp388_sample_count == 220U);
+    CHECK(g_baro_state == BARO_WAITING && g_baro_valid == 0U);
     NewData(1130000U); Application_DataReadyISR(1130001U); now_us = 1130010U;
     Application_Poll(1130U);
     CHECK(g_bmp388_event_overrun_count == 1U);
@@ -168,5 +311,28 @@ void Test_Run(void)
     bmp388_device_t device = {.read=Read, .write=Write};
     CHECK(BMP388_Configure200Hz(&device) == BMP388_CONFIG_MISMATCH);
     CHECK(device.configured == 0U && device.registers.int_ctrl == 0U);
+    /* End-to-end main application: capture, health fault/recovery, manual zero. */
+    now_us = 0U; Start(0U);
+    for (uint32_t i = 1U; i <= 2601U; ++i) {
+        NewData(20000U + i * 5000U);
+        Application_Poll(20U + i * 5U);
+    }
+    CHECK(g_baro_reference_ready == 1U && g_baro_valid == 1U);
+    CHECK(fabs(g_baro_reference_pa - golden[10].pressure) < 1e-7);
+    CHECK(fabs(g_baro_altitude_relative_m) < 1e-8);
+    const double fixed_reference = g_baro_reference_pa;
+    NewData(14025000U); registers[2] = 1U; Application_Poll(14025U);
+    CHECK(g_bmp388_state == 3U && g_baro_valid == 0U);
+    CHECK(g_baro_reference_ready == 1U && g_baro_reference_pa == fixed_reference);
+    registers[2] = 0U; now_us = 15025000U; Application_Poll(15025U);
+    now_us = 15035000U; Application_Poll(15035U);
+    NewData(15040000U); Application_Poll(15040U);
+    CHECK(g_baro_valid == 1U && g_baro_reference_pa == fixed_reference);
+    now_us += 100001U; Application_Poll(15140U);
+    CHECK(g_baro_valid == 0U && g_baro_reference_ready == 1U);
+    g_baro_zero_request = 1U; Application_Poll(15141U);
+    CHECK(g_baro_zero_request == 0U && g_baro_reference_ready == 0U);
+    CHECK(g_baro_state == BARO_CAPTURING && g_baro_reference_samples == 0U);
+    CheckAltitude();
     Test_Done();
 }
